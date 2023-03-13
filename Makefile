@@ -10,3 +10,6 @@ verifier/verifier.go: build/Verifier.abi build/Verifier.bin
 .PHONY: clean
 clean:
 	rm -f build/Verifier.abi build/Pairing.abi build/Verifier.bin build/Pairing.bin verifier/verifier.go
+
+.PHONY: all
+all: verifier/verifier.go
