@@ -1,11 +1,11 @@
 package verifier_plonk
 
-type Verifier struct{}
+type VerifierPlonk struct{}
 
-func DeployVerifier(args ...any) (any, any, *Verifier, error) {
+func DeployVerifierPlonk(args ...any) (any, any, *VerifierPlonk, error) {
 	panic("dummy function")
 }
 
-func (*Verifier) VerifyProof(_, _, _, _, _ any) error {
+func (*VerifierPlonk) VerifyProof(_, _, _, _, _ any) error {
 	panic("dummy function")
 }

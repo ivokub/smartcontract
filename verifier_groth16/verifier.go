@@ -1,11 +1,11 @@
 package verifier_groth16
 
-type Verifier struct{}
+type VerifierGroth16 struct{}
 
-func DeployVerifier(args ...any) (any, any, *Verifier, error) {
+func DeployVerifierGroth16(args ...any) (any, any, *VerifierGroth16, error) {
 	panic("dummy function")
 }
 
-func (*Verifier) VerifyProof(_, _, _, _, _ any) error {
+func (*VerifierGroth16) VerifyProof(_, _, _, _, _ any) error {
 	panic("dummy function")
 }
