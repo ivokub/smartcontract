@@ -31,4 +31,18 @@ Install abigen:
         go run main.go testGroth16
         go run main.go testPlonk
 
-You can have a look at `main.go` on how to compile, deploy and run.
+    You can have a look at `main.go` on how to compile, deploy and run.
+
+6. For cleanup, run:
+
+        make clean
+
+7. To cleanup setup files, run:
+
+        make clean-setup
+
+    This makes it impossible to generate proofs anymore for any smart contract deployed with the verifying key. Use with care
+
+## Considerations
+
+This is only an example how to verify gnark proofs. In practice the setups can be split into smaller parts and the keys should be generated using MPC.
