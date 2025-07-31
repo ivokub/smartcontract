@@ -12,7 +12,7 @@ Install Go:
 
 Install abigen:
 
-    go install github.com/ethereum/go-ethereum/cmd/abigen@latest
+    go install github.com/ethereum/go-ethereum/cmd/abigen@v1.16.1
 
 ## Running
 
