@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	fp_bn254 "github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	fr_bn254 "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/groth16"
-	bn254_groth16 "github.com/consensys/gnark/backend/groth16/bn254"
 	plonk "github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/backend/solidity"
 	"github.com/consensys/gnark/constraint"
@@ -176,7 +176,7 @@ type ethVerifierPlonk struct {
 	vk      plonk.VerifyingKey
 	pk      plonk.ProvingKey
 	circuit circuit.Circuit
-	r1cs    constraint.ConstraintSystem
+	scs     constraint.ConstraintSystem
 }
 
 func setupGroth16() (*ethVerifierGroth16, error) {
@@ -267,7 +267,7 @@ func runGroth16(ev *ethVerifierGroth16) error {
 	}
 
 	// prove
-	proof, err := groth16.Prove(ev.r1cs, ev.pk.(groth16.ProvingKey), witness, solidity.WithProverTargetSolidityVerifier(backend.GROTH16))
+	proof, err := groth16.Prove(ev.r1cs, ev.pk, witness, solidity.WithProverTargetSolidityVerifier(backend.GROTH16))
 	if err != nil {
 		return fmt.Errorf("prove: %w", err)
 	}
@@ -277,36 +277,27 @@ func runGroth16(ev *ethVerifierGroth16) error {
 	if err != nil {
 		return fmt.Errorf("new public witness: %w", err)
 	}
-	if err = groth16.Verify(proof, ev.vk.(groth16.VerifyingKey), publicWitness, solidity.WithVerifierTargetSolidityVerifier(backend.GROTH16)); err != nil {
+	if err = groth16.Verify(proof, ev.vk, publicWitness, solidity.WithVerifierTargetSolidityVerifier(backend.GROTH16)); err != nil {
 		return fmt.Errorf("verify: %w", err)
 	}
 
 	// Set the proof as big inputs what the contract expects
-	tProof, ok := proof.(*bn254_groth16.Proof)
-	if !ok {
-		return fmt.Errorf("expected bn254_groth16.Proof, got %T", proof)
-	}
+	proofBytes := proof.(interface{ MarshalSolidity() []byte }).MarshalSolidity()
 	var proofInts [8]*big.Int
-	proofInts[0] = tProof.Ar.X.BigInt(new(big.Int))
-	proofInts[1] = tProof.Ar.Y.BigInt(new(big.Int))
-	proofInts[2] = tProof.Bs.X.A1.BigInt(new(big.Int))
-	proofInts[3] = tProof.Bs.X.A0.BigInt(new(big.Int))
-	proofInts[4] = tProof.Bs.Y.A1.BigInt(new(big.Int))
-	proofInts[5] = tProof.Bs.Y.A0.BigInt(new(big.Int))
-	proofInts[6] = tProof.Krs.X.BigInt(new(big.Int))
-	proofInts[7] = tProof.Krs.Y.BigInt(new(big.Int))
+	for i := range proofInts {
+		proofInts[i] = new(big.Int).SetBytes(proofBytes[fp_bn254.Bytes*i : fp_bn254.Bytes*(i+1)])
+	}
 
 	// Set the commitments. This part is not necessary when the circuit does not use commitments
 	var commitments [2 * NbCommitments]*big.Int
 	var commitmentsPok [2]*big.Int
-	if len(tProof.Commitments) != NbCommitments {
-		// expected only one commitment
-		return fmt.Errorf("expected %d commitment, got %d", NbCommitments, len(tProof.Commitments))
+	for i := range commitments {
+		commitments[i] = new(big.Int).SetBytes(proofBytes[fp_bn254.Bytes*len(proofInts)+4+i*fp_bn254.Bytes : fp_bn254.Bytes*len(proofInts)+4+(i+1)*fp_bn254.Bytes])
 	}
-	commitments[0] = tProof.Commitments[0].X.BigInt(new(big.Int))
-	commitments[1] = tProof.Commitments[0].Y.BigInt(new(big.Int))
-	commitmentsPok[0] = tProof.CommitmentPok.X.BigInt(new(big.Int))
-	commitmentsPok[1] = tProof.CommitmentPok.Y.BigInt(new(big.Int))
+	// Set the commitment pok
+	for i := range commitmentsPok {
+		commitmentsPok[i] = new(big.Int).SetBytes(proofBytes[fp_bn254.Bytes*(len(proofInts)+len(commitments))+4+i*fp_bn254.Bytes : fp_bn254.Bytes*(len(proofInts)+len(commitments))+4+(i+1)*fp_bn254.Bytes])
+	}
 
 	// now convert the public inputs.
 	publicWitnessVector := publicWitness.Vector()
@@ -478,7 +469,7 @@ func setupPlonk() (*ethVerifierPlonk, error) {
 		vk:               vk,
 		pk:               pk,
 		circuit:          circuit.Circuit{},
-		r1cs:             ccs,
+		scs:              ccs,
 	}, nil
 }
 
@@ -503,7 +494,7 @@ func runPlonk(ev *ethVerifierPlonk) error {
 	}
 
 	// prove
-	proof, err := plonk.Prove(ev.r1cs, ev.pk.(plonk.ProvingKey), witness, solidity.WithProverTargetSolidityVerifier(backend.PLONK))
+	proof, err := plonk.Prove(ev.scs, ev.pk, witness, solidity.WithProverTargetSolidityVerifier(backend.PLONK))
 	if err != nil {
 		return fmt.Errorf("prove: %w", err)
 	}
@@ -513,9 +504,12 @@ func runPlonk(ev *ethVerifierPlonk) error {
 	if err != nil {
 		return fmt.Errorf("new public witness: %w", err)
 	}
-	if err = plonk.Verify(proof, ev.vk.(plonk.VerifyingKey), publicWitness, solidity.WithVerifierTargetSolidityVerifier(backend.PLONK)); err != nil {
+	if err = plonk.Verify(proof, ev.vk, publicWitness, solidity.WithVerifierTargetSolidityVerifier(backend.PLONK)); err != nil {
 		return fmt.Errorf("verify: %w", err)
 	}
+
+	// prepare the proof for the contract
+	proofBytes := proof.(interface{ MarshalSolidity() []byte }).MarshalSolidity()
 
 	// now convert the public inputs.
 	publicWitnessVector := publicWitness.Vector()
@@ -524,43 +518,41 @@ func runPlonk(ev *ethVerifierPlonk) error {
 		return fmt.Errorf("expected fr_bn254.Vector, got %T", publicWitnessVector)
 	}
 
-	var publicInputs [NbPublicInputs]*big.Int
-	if len(tPublicWitnessVector) != NbPublicInputs {
+	publicInputs := make([]*big.Int, ev.scs.GetNbPublicVariables())
+	if len(tPublicWitnessVector) != len(publicInputs) {
 		return fmt.Errorf("expected %d public inputs, got %d", NbPublicInputs, len(tPublicWitnessVector))
 	}
 	for i, e := range tPublicWitnessVector {
 		publicInputs[i] = e.BigInt(new(big.Int))
 	}
 
-	// for i := range proofInts {
-	// 	fmt.Printf("proof[%d] = %s\n", i, proofInts[i].Text(16))
-	// }
-	// for i := range commitments {
-	// 	fmt.Printf("commitments[%d] = %s\n", i, commitments[i].Text(16))
-	// }
-	// for i := range commitmentsPok {
-	// 	fmt.Printf("commitmentsPok[%d] = %s\n", i, commitmentsPok[i].Text(16))
-	// }
-	// for i := range publicInputs {
-	// 	fmt.Printf("publicInputs[%d] = %s\n", i, publicInputs[i].Text(10))
-	// }
+	fmt.Printf("proof %d: %x\n", len(proofBytes), proofBytes)
+	for i := range publicInputs {
+		fmt.Printf("publicInputs[%d] = %s\n", i, publicInputs[i].Text(10))
+	}
 
-	// // call the contract
-	// err = ev.verifierContract.VerifyProof(nil, proofInts, commitments, commitmentsPok, publicInputs)
-	// if err != nil {
-	// 	return fmt.Errorf("calling verifier: %w", err)
-	// }
+	// call the contract
+	ok, err = ev.verifierContract.Verify(nil, proofBytes, publicInputs)
+	if err != nil {
+		return fmt.Errorf("calling verifier: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("verifier returned false")
+	}
 
-	// // (wrong) public witness
-	// var wrongPublicInput [NbPublicInputs]*big.Int
-	// for i := 0; i < NbPublicInputs; i++ {
-	// 	wrongPublicInput[i] = new(big.Int).SetUint64(999)
-	// }
+	// (wrong) public witness
+	wrongPublicInput := make([]*big.Int, ev.scs.GetNbPublicVariables())
+	for i := range wrongPublicInput {
+		wrongPublicInput[i] = new(big.Int).SetUint64(999)
+	}
 
-	// // call the contract should fail
-	// err = ev.verifierContract.VerifyProof(nil, proofInts, commitments, commitmentsPok, wrongPublicInput)
-	// if err == nil {
-	// 	return fmt.Errorf("call verifier with wrong input should have failed")
-	// }
+	// call the contract should fail
+	ok, err = ev.verifierContract.Verify(nil, proofBytes, wrongPublicInput)
+	if err != nil {
+		return fmt.Errorf("call verifier with wrong input should have failed")
+	}
+	if ok {
+		return fmt.Errorf("call verifier with wrong input should have returned false")
+	}
 	return nil
 }
