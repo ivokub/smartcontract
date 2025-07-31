@@ -1,8 +1,8 @@
 build/Verifier.abi:
-	solc --abi RSA.G16.sol -o build
+	solc --evm-version paris --abi RSA.G16.sol -o build
 
 build/Verifier.bin:
-	solc --bin RSA.G16.sol -o build
+	solc --evm-version paris --bin RSA.G16.sol -o build
 
 verifier/verifier.go: build/Verifier.abi build/Verifier.bin
 	abigen --abi build/Verifier.abi --pkg verifier --type Verifier --out verifier/verifier.go --bin build/Verifier.bin
