@@ -21,13 +21,14 @@ Install abigen:
 
         go run main.go generate
 
-3. View the solidity smart contract `RSA.G16.sol` (other files with same prefix are proving key, veriyfing key and compiled arithmetisation)
+3. View the solidity smart contract `RSA.G16.sol` and `RSA.PLONK.sol` (other files with same prefix are proving key, veriyfing key and compiled arithmetisation)
 4. Generate ABI and bytecode:
 
         make all
 
-5. Run the test:
+5. Run the tests:
 
-        go run main.go test
+        go run main.go testGroth16
+        go run main.go testPlonk
 
 You can have a look at `main.go` on how to compile, deploy and run.
