@@ -6,6 +6,6 @@ func DeployVerifierPlonk(args ...any) (any, any, *VerifierPlonk, error) {
 	panic("dummy function")
 }
 
-func (*VerifierPlonk) VerifyProof(_, _, _, _, _ any) error {
+func (*VerifierPlonk) Verify(_, _, _ any) (bool, error) {
 	panic("dummy function")
 }
