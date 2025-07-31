@@ -59,6 +59,7 @@ func main() {
 	args := flag.Args()
 	if len(args) != 1 {
 		fmt.Println("subcommand 'generate', 'testGroth16' or 'testPlonk'")
+		os.Exit(0)
 	}
 	switch args[0] {
 	case "generate":
@@ -92,6 +93,7 @@ func main() {
 		}
 	default:
 		fmt.Println("unknown subcommand. valid commands 'generate', 'testGroth16', 'testPlonk'")
+		os.Exit(0)
 	}
 	fmt.Println("OK!")
 }
