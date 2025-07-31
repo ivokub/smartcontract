@@ -18,8 +18,8 @@ verifier_plonk/verifier.go: build-plonk/Verifier.abi build-plonk/Verifier.bin
 
 .PHONY: clean
 clean:
-	rm -f build-groth16/Verifier.abi build-groth16/Pairing.abi build-groth16/Verifier.bin build-groth16/Pairing.bin verifier_groth16/verifier.go
-	rm -f build-plonk/Verifier.abi build-plonk/Pairing.abi build-plonk/Verifier.bin build-plonk/Pairing.bin verifier_plonk/verifier.go
+	rm -f build-groth16/Verifier.abi build-groth16/Verifier.bin verifier_groth16/verifier.go
+	rm -f build-plonk/PlonkVerifier.abi build-plonk/PlonkVerifier.bin verifier_plonk/verifier.go
 	git restore verifier_groth16/verifier.go verifier_plonk/verifier.go
 
 .PHONY: clean-setup
