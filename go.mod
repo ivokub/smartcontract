@@ -1,8 +1,6 @@
 module github.com/ivokub/smartcontract
 
-go 1.23.0
-
-toolchain go1.24.5
+go 1.24.6
 
 require (
 	github.com/consensys/gnark v0.13.1-0.20250730150222-dfa9af695f09
